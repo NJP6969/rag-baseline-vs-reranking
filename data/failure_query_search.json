@@ -1,0 +1,730 @@
+[
+ {
+  "category": "negation",
+  "query": "If an AI risk cannot be measured, does that mean the system is low risk?",
+  "target_phrase": "inability to appropriately measure ai risks does not imply",
+  "target_chunks": [
+   "chunk_0036"
+  ],
+  "bi_rank": 1,
+  "ce_rank": 1,
+  "verdict": "already_top3",
+  "bi_top3": [
+   "chunk_0036",
+   "chunk_0043",
+   "chunk_0035"
+  ],
+  "ce_top3": [
+   "chunk_0036",
+   "chunk_0163",
+   "chunk_0043"
+  ]
+ },
+ {
+  "category": "negation",
+  "query": "Does making an AI system transparent guarantee that it is accurate or fair?",
+  "target_phrase": "a transparent system is not necessarily an accurate",
+  "target_chunks": [
+   "chunk_0096"
+  ],
+  "bi_rank": 4,
+  "ce_rank": 1,
+  "verdict": "PROMOTED",
+  "bi_top3": [
+   "chunk_0093",
+   "chunk_0072",
+   "chunk_0095"
+  ],
+  "ce_top3": [
+   "chunk_0096",
+   "chunk_0079",
+   "chunk_0095"
+  ]
+ },
+ {
+  "category": "negation",
+  "query": "Should organizations try to eliminate all negative AI risk?",
+  "target_phrase": "attempting to eliminate negative risk entirely can be counterproductive",
+  "target_chunks": [
+   "chunk_0049"
+  ],
+  "bi_rank": 40,
+  "ce_rank": null,
+  "verdict": "stage1_miss",
+  "bi_top3": [
+   "chunk_0047",
+   "chunk_0034",
+   "chunk_0015"
+  ],
+  "ce_top3": [
+   "chunk_0047",
+   "chunk_0035",
+   "chunk_0032"
+  ]
+ },
+ {
+  "category": "negation",
+  "query": "Does mitigating harmful bias automatically make an AI system fair?",
+  "target_phrase": "systems in which harmful biases are mitigated are not necessarily fair",
+  "target_chunks": [
+   "chunk_0107"
+  ],
+  "bi_rank": 53,
+  "ce_rank": null,
+  "verdict": "stage1_miss",
+  "bi_top3": [
+   "chunk_0110",
+   "chunk_0111",
+   "chunk_0106"
+  ],
+  "ce_top3": [
+   "chunk_0106",
+   "chunk_0224",
+   "chunk_0210"
+  ]
+ },
+ {
+  "category": "negation",
+  "query": "Is following the AI RMF legally mandatory for companies?",
+  "target_phrase": "voluntary",
+  "target_chunks": [
+   "chunk_0020",
+   "chunk_0119",
+   "chunk_0231"
+  ],
+  "bi_rank": 1,
+  "ce_rank": 2,
+  "verdict": "already_top3",
+  "bi_top3": [
+   "chunk_0020",
+   "chunk_0232",
+   "chunk_0231"
+  ],
+  "ce_top3": [
+   "chunk_0058",
+   "chunk_0020",
+   "chunk_0235"
+  ]
+ },
+ {
+  "category": "negation",
+  "query": "What level of risk tolerance does the framework require organizations to adopt?",
+  "target_phrase": "it does not prescribe risk tolerance",
+  "target_chunks": [
+   "chunk_0045"
+  ],
+  "bi_rank": 3,
+  "ce_rank": 1,
+  "verdict": "already_top3",
+  "bi_top3": [
+   "chunk_0047",
+   "chunk_0046",
+   "chunk_0045"
+  ],
+  "ce_top3": [
+   "chunk_0045",
+   "chunk_0047",
+   "chunk_0048"
+  ]
+ },
+ {
+  "category": "negation",
+  "query": "Which AI systems are prohibited from being deployed under the framework?",
+  "target_phrase": "development and deployment should cease in a safe manner",
+  "target_chunks": [
+   "chunk_0051"
+  ],
+  "bi_rank": 13,
+  "ce_rank": null,
+  "verdict": "stage1_miss",
+  "bi_top3": [
+   "chunk_0176",
+   "chunk_0056",
+   "chunk_0013"
+  ],
+  "ce_top3": [
+   "chunk_0176",
+   "chunk_0020",
+   "chunk_0056"
+  ]
+ },
+ {
+  "category": "negation",
+  "query": "Is the AI RMF meant to be applied as a one-size-fits-all checklist?",
+  "target_phrase": "checklist",
+  "target_chunks": [
+   "chunk_0116",
+   "chunk_0117"
+  ],
+  "bi_rank": 1,
+  "ce_rank": 3,
+  "verdict": "already_top3",
+  "bi_top3": [
+   "chunk_0116",
+   "chunk_0231",
+   "chunk_0184"
+  ],
+  "ce_top3": [
+   "chunk_0020",
+   "chunk_0119",
+   "chunk_0116"
+  ]
+ },
+ {
+  "category": "exception",
+  "query": "Is there any situation in which the framework says AI development should be stopped entirely?",
+  "target_phrase": "development and deployment should cease in a safe manner",
+  "target_chunks": [
+   "chunk_0051"
+  ],
+  "bi_rank": 9,
+  "ce_rank": 1,
+  "verdict": "PROMOTED",
+  "bi_top3": [
+   "chunk_0013",
+   "chunk_0191",
+   "chunk_0176"
+  ],
+  "ce_top3": [
+   "chunk_0051",
+   "chunk_0047",
+   "chunk_0234"
+  ]
+ },
+ {
+  "category": "exception",
+  "query": "Under what conditions can privacy-enhancing techniques reduce model accuracy?",
+  "target_phrase": "under certain conditions such as data sparsity",
+  "target_chunks": [
+   "chunk_0075",
+   "chunk_0105",
+   "chunk_0106"
+  ],
+  "bi_rank": 1,
+  "ce_rank": 1,
+  "verdict": "already_top3",
+  "bi_top3": [
+   "chunk_0075",
+   "chunk_0105",
+   "chunk_0104"
+  ],
+  "ce_top3": [
+   "chunk_0105",
+   "chunk_0075",
+   "chunk_0106"
+  ]
+ },
+ {
+  "category": "exception",
+  "query": "When should AI developers adjust their transparency and accountability practices?",
+  "target_phrase": "when consequences are severe such as when life and liberty are at stake",
+  "target_chunks": [
+   "chunk_0097"
+  ],
+  "bi_rank": 1,
+  "ce_rank": 1,
+  "verdict": "already_top3",
+  "bi_top3": [
+   "chunk_0097",
+   "chunk_0093",
+   "chunk_0095"
+  ],
+  "ce_top3": [
+   "chunk_0097",
+   "chunk_0098",
+   "chunk_0093"
+  ]
+ },
+ {
+  "category": "exception",
+  "query": "What limits are placed on transparency because of the cost to the organization?",
+  "target_phrase": "need to safeguard proprietary information",
+  "target_chunks": [
+   "chunk_0098"
+  ],
+  "bi_rank": 5,
+  "ce_rank": 1,
+  "verdict": "PROMOTED",
+  "bi_top3": [
+   "chunk_0095",
+   "chunk_0093",
+   "chunk_0111"
+  ],
+  "ce_top3": [
+   "chunk_0098",
+   "chunk_0095",
+   "chunk_0093"
+  ]
+ },
+ {
+  "category": "exception",
+  "query": "When can risk measured in a laboratory differ from risk in the real world?",
+  "target_phrase": "measuring ai risks in a laboratory or a controlled environment may",
+  "target_chunks": [
+   "chunk_0042",
+   "chunk_0043"
+  ],
+  "bi_rank": 1,
+  "ce_rank": 1,
+  "verdict": "already_top3",
+  "bi_top3": [
+   "chunk_0043",
+   "chunk_0036",
+   "chunk_0160"
+  ],
+  "ce_top3": [
+   "chunk_0043",
+   "chunk_0030",
+   "chunk_0036"
+  ]
+ },
+ {
+  "category": "exception",
+  "query": "Can a risk measured early in the AI lifecycle change later on?",
+  "target_phrase": "measuring risk at an earlier stage in the ai lifecycle may yield different results",
+  "target_chunks": [
+   "chunk_0041"
+  ],
+  "bi_rank": 1,
+  "ce_rank": 1,
+  "verdict": "already_top3",
+  "bi_top3": [
+   "chunk_0041",
+   "chunk_0043",
+   "chunk_0029"
+  ],
+  "ce_top3": [
+   "chunk_0041",
+   "chunk_0043",
+   "chunk_0036"
+  ]
+ },
+ {
+  "category": "exception",
+  "query": "Why can third-party software and data make AI risk harder to measure?",
+  "target_phrase": "thirdparty software hardware and data",
+  "target_chunks": [
+   "chunk_0036"
+  ],
+  "bi_rank": 1,
+  "ce_rank": 1,
+  "verdict": "already_top3",
+  "bi_top3": [
+   "chunk_0036",
+   "chunk_0037",
+   "chunk_0013"
+  ],
+  "ce_top3": [
+   "chunk_0036",
+   "chunk_0037",
+   "chunk_0218"
+  ]
+ },
+ {
+  "category": "exception",
+  "query": "What should happen when an AI system shows outcomes inconsistent with its intended use?",
+  "target_phrase": "supersede disengage or deactivate ai systems",
+  "target_chunks": [
+   "chunk_0180"
+  ],
+  "bi_rank": 76,
+  "ce_rank": null,
+  "verdict": "stage1_miss",
+  "bi_top3": [
+   "chunk_0210",
+   "chunk_0139",
+   "chunk_0096"
+  ],
+  "ce_top3": [
+   "chunk_0139",
+   "chunk_0096",
+   "chunk_0014"
+  ]
+ },
+ {
+  "category": "keyword_trap",
+  "query": "How is resilience different from security for an AI system?",
+  "target_phrase": "can maintain confidentiality integrity and availability through protection mechanisms",
+  "target_chunks": [
+   "chunk_0091"
+  ],
+  "bi_rank": 34,
+  "ce_rank": null,
+  "verdict": "stage1_miss",
+  "bi_top3": [
+   "chunk_0092",
+   "chunk_0167",
+   "chunk_0168"
+  ],
+  "ce_top3": [
+   "chunk_0092",
+   "chunk_0168",
+   "chunk_0167"
+  ]
+ },
+ {
+  "category": "keyword_trap",
+  "query": "What does the framework mean by the ability of a system to bounce back after an unexpected adverse event?",
+  "target_phrase": "return to normal function after an unexpected adverse event",
+  "target_chunks": [
+   "chunk_0092"
+  ],
+  "bi_rank": 5,
+  "ce_rank": 1,
+  "verdict": "PROMOTED",
+  "bi_top3": [
+   "chunk_0030",
+   "chunk_0085",
+   "chunk_0014"
+  ],
+  "ce_top3": [
+   "chunk_0092",
+   "chunk_0085",
+   "chunk_0031"
+  ]
+ },
+ {
+  "category": "keyword_trap",
+  "query": "What is the difference between explainability and interpretability?",
+  "target_phrase": "explainability can answer the question of how",
+  "target_chunks": [
+   "chunk_0102",
+   "chunk_0103"
+  ],
+  "bi_rank": 4,
+  "ce_rank": 3,
+  "verdict": "PROMOTED",
+  "bi_top3": [
+   "chunk_0101",
+   "chunk_0100",
+   "chunk_0099"
+  ],
+  "ce_top3": [
+   "chunk_0100",
+   "chunk_0099",
+   "chunk_0102"
+  ]
+ },
+ {
+  "category": "keyword_trap",
+  "query": "What does validation mean in the AI RMF?",
+  "target_phrase": "confirmation through the provision of objective evidence",
+  "target_chunks": [
+   "chunk_0080"
+  ],
+  "bi_rank": 4,
+  "ce_rank": 5,
+  "verdict": "not_promoted",
+  "bi_top3": [
+   "chunk_0231",
+   "chunk_0020",
+   "chunk_0116"
+  ],
+  "ce_top3": [
+   "chunk_0196",
+   "chunk_0083",
+   "chunk_0020"
+  ]
+ },
+ {
+  "category": "keyword_trap",
+  "query": "Who are the people that should be consulted outside the organization building the AI?",
+  "target_phrase": "affected communities",
+  "target_chunks": [
+   "chunk_0163",
+   "chunk_0164",
+   "chunk_0173",
+   "chunk_0174",
+   "chunk_0183"
+  ],
+  "bi_rank": 22,
+  "ce_rank": null,
+  "verdict": "stage1_miss",
+  "bi_top3": [
+   "chunk_0206",
+   "chunk_0190",
+   "chunk_0232"
+  ],
+  "ce_top3": [
+   "chunk_0232",
+   "chunk_0203",
+   "chunk_0206"
+  ]
+ },
+ {
+  "category": "keyword_trap",
+  "query": "How should an organization retire an AI system safely?",
+  "target_phrase": "decommissioning and phasing out ai systems safely",
+  "target_chunks": [
+   "chunk_0130",
+   "chunk_0131"
+  ],
+  "bi_rank": 42,
+  "ce_rank": null,
+  "verdict": "stage1_miss",
+  "bi_top3": [
+   "chunk_0015",
+   "chunk_0007",
+   "chunk_0179"
+  ],
+  "ce_top3": [
+   "chunk_0051",
+   "chunk_0087",
+   "chunk_0055"
+  ]
+ },
+ {
+  "category": "keyword_trap",
+  "query": "What does the framework say about humans overseeing AI decisions and their own biases?",
+  "target_phrase": "human cognitive biases",
+  "target_chunks": [
+   "chunk_0223"
+  ],
+  "bi_rank": 2,
+  "ce_rank": 1,
+  "verdict": "already_top3",
+  "bi_top3": [
+   "chunk_0224",
+   "chunk_0223",
+   "chunk_0109"
+  ],
+  "ce_top3": [
+   "chunk_0223",
+   "chunk_0225",
+   "chunk_0109"
+  ]
+ },
+ {
+  "category": "keyword_trap",
+  "query": "What are the three categories of AI bias?",
+  "target_phrase": "systemic computational and statistical and humancognitive",
+  "target_chunks": [
+   "chunk_0108"
+  ],
+  "bi_rank": 2,
+  "ce_rank": 1,
+  "verdict": "already_top3",
+  "bi_top3": [
+   "chunk_0110",
+   "chunk_0108",
+   "chunk_0109"
+  ],
+  "ce_top3": [
+   "chunk_0108",
+   "chunk_0111",
+   "chunk_0109"
+  ]
+ },
+ {
+  "category": "keyword_trap",
+  "query": "What is a current profile versus a target profile?",
+  "target_phrase": "current profile indicates how ai is currently being managed",
+  "target_chunks": [
+   "chunk_0185",
+   "chunk_0186"
+  ],
+  "bi_rank": 1,
+  "ce_rank": 1,
+  "verdict": "already_top3",
+  "bi_top3": [
+   "chunk_0186",
+   "chunk_0185",
+   "chunk_0184"
+  ],
+  "ce_top3": [
+   "chunk_0186",
+   "chunk_0185",
+   "chunk_0184"
+  ]
+ },
+ {
+  "category": "other",
+  "query": "What does the Measure function do?",
+  "target_phrase": "measure function employs quantitative qualitative or mixedmethod tools",
+  "target_chunks": [
+   "chunk_0156"
+  ],
+  "bi_rank": 3,
+  "ce_rank": 3,
+  "verdict": "already_top3",
+  "bi_top3": [
+   "chunk_0161",
+   "chunk_0006",
+   "chunk_0156"
+  ],
+  "ce_top3": [
+   "chunk_0158",
+   "chunk_0161",
+   "chunk_0156"
+  ]
+ },
+ {
+  "category": "other",
+  "query": "Why is it hard to compare AI risk with risks from human baselines?",
+  "target_phrase": "human baseline",
+  "target_chunks": [
+   "chunk_0043",
+   "chunk_0044"
+  ],
+  "bi_rank": 1,
+  "ce_rank": 1,
+  "verdict": "already_top3",
+  "bi_top3": [
+   "chunk_0044",
+   "chunk_0043",
+   "chunk_0041"
+  ],
+  "ce_top3": [
+   "chunk_0044",
+   "chunk_0043",
+   "chunk_0036"
+  ]
+ },
+ {
+  "category": "other",
+  "query": "Why are pre-trained models a source of risk?",
+  "target_phrase": "pretrained models",
+  "target_chunks": [
+   "chunk_0041",
+   "chunk_0042",
+   "chunk_0181",
+   "chunk_0208",
+   "chunk_0211",
+   "chunk_0212"
+  ],
+  "bi_rank": 1,
+  "ce_rank": 1,
+  "verdict": "already_top3",
+  "bi_top3": [
+   "chunk_0042",
+   "chunk_0041",
+   "chunk_0187"
+  ],
+  "ce_top3": [
+   "chunk_0042",
+   "chunk_0208",
+   "chunk_0211"
+  ]
+ },
+ {
+  "category": "other",
+  "query": "Who should perform test, evaluation, verification and validation tasks?",
+  "target_phrase": "tevv",
+  "target_chunks": [
+   "chunk_0061",
+   "chunk_0062",
+   "chunk_0063",
+   "chunk_0077",
+   "chunk_0115",
+   "chunk_0147",
+   "chunk_0151",
+   "chunk_0159",
+   "chunk_0164",
+   "chunk_0169",
+   "chunk_0194",
+   "chunk_0195",
+   "chunk_0196",
+   "chunk_0197",
+   "chunk_0200"
+  ],
+  "bi_rank": 1,
+  "ce_rank": 1,
+  "verdict": "already_top3",
+  "bi_top3": [
+   "chunk_0195",
+   "chunk_0194",
+   "chunk_0164"
+  ],
+  "ce_top3": [
+   "chunk_0195",
+   "chunk_0194",
+   "chunk_0196"
+  ]
+ },
+ {
+  "category": "other",
+  "query": "What does the framework say about how frequently risk management should be reviewed?",
+  "target_phrase": "determining the frequency of periodic review",
+  "target_chunks": [
+   "chunk_0130"
+  ],
+  "bi_rank": 2,
+  "ce_rank": 2,
+  "verdict": "already_top3",
+  "bi_top3": [
+   "chunk_0187",
+   "chunk_0130",
+   "chunk_0233"
+  ],
+  "ce_top3": [
+   "chunk_0047",
+   "chunk_0130",
+   "chunk_0233"
+  ]
+ },
+ {
+  "category": "orig_q1",
+  "query": "What specific operational actions are required for AI system decommissioning and end-of-life residual risk?",
+  "target_phrase": "decommissioning and phasing out ai systems safely",
+  "target_chunks": [
+   "chunk_0130",
+   "chunk_0131"
+  ],
+  "bi_rank": 29,
+  "ce_rank": null,
+  "verdict": "stage1_miss",
+  "bi_top3": [
+   "chunk_0054",
+   "chunk_0051",
+   "chunk_0179"
+  ],
+  "ce_top3": [
+   "chunk_0054",
+   "chunk_0178",
+   "chunk_0179"
+  ]
+ },
+ {
+  "category": "orig_q2",
+  "query": "Under what circumstances is transparency intentionally restricted or not advisable according to the framework?",
+  "target_phrase": "need to safeguard proprietary information",
+  "target_chunks": [
+   "chunk_0098"
+  ],
+  "bi_rank": 9,
+  "ce_rank": 6,
+  "verdict": "not_promoted",
+  "bi_top3": [
+   "chunk_0095",
+   "chunk_0093",
+   "chunk_0111"
+  ],
+  "ce_top3": [
+   "chunk_0095",
+   "chunk_0093",
+   "chunk_0104"
+  ]
+ },
+ {
+  "category": "orig_q3",
+  "query": "How can increasing model explainability directly undermine privacy or create security vulnerabilities?",
+  "target_phrase": "membership inference",
+  "target_chunks": [
+   "chunk_0217",
+   "chunk_0218"
+  ],
+  "bi_rank": 14,
+  "ce_rank": null,
+  "verdict": "stage1_miss",
+  "bi_top3": [
+   "chunk_0075",
+   "chunk_0101",
+   "chunk_0105"
+  ],
+  "ce_top3": [
+   "chunk_0105",
+   "chunk_0075",
+   "chunk_0103"
+  ]
+ }
+]
