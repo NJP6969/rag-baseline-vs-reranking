@@ -1,193 +1,118 @@
-# Two-Stage RAG Evaluation: Dense Bi-Encoder Baseline vs. Cross-Encoder Re-Ranking
+# RAG Assignment: Bi-Encoder Baseline vs. Cross-Encoder Re-Ranking
 
 **Author:** Narasimha Pai  
-**Code Repository:** [https://github.com/NJP6969/rag-baseline-vs-reranking](https://github.com/NJP6969/rag-baseline-vs-reranking)  
-**Main Executed Notebook:** [`notebooks/rag_baseline_vs_reranking.ipynb`](file:///C:/Users/narsi/Documents/antigravity/charming-darwin/notebooks/rag_baseline_vs_reranking.ipynb)  
-**Corpus:** NIST Artificial Intelligence Risk Management Framework (AI RMF 1.0 / NIST AI 100-1, 48 pages)  
-**Hardware & Platform:** IIIT Hyderabad ADA HPC Cluster (`gnode103`, NVIDIA GeForce RTX 3080 Ti 12GB VRAM, CUDA 12.4, PyTorch 2.4.0)
+**Code:** https://github.com/NJP6969/rag-baseline-vs-reranking (main notebook: [`notebooks/rag_baseline_vs_reranking.ipynb`](notebooks/rag_baseline_vs_reranking.ipynb))  
+**Corpus:** NIST AI Risk Management Framework (AI RMF 1.0, NIST AI 100-1), 48 pages, 237 chunks (600 characters, 120 overlap)  
+**Setup:** all-MiniLM-L6-v2 + FAISS (`IndexFlatIP`), ms-marco-MiniLM-L-6-v2 re-ranker, Qwen2.5-14B-Instruct (4-bit NF4, greedy decoding) on one RTX 3080 Ti (Ada `gnode103`)
 
----
+## 1. Architecture comparison
 
-## 1. Architecture Comparison: Bi-Encoders vs. Cross-Encoders
+**Bi-encoder** (all-MiniLM-L6-v2): query and chunk are encoded separately.
 
-The fundamental divide between a Bi-Encoder and a Cross-Encoder lies in **when and how tokens are allowed to interact**.
-
-```
-Bi-Encoder (Two-Tower / Siamese):
-  Query q   --> [ Transformer ] --> Pooling --> e_q (384-d vector) \
-                                                                    --> Cosine Similarity (MIPS)
-  Chunk d   --> [ Transformer ] --> Pooling --> e_d (384-d vector) /   (Cached offline in FAISS)
-
-Cross-Encoder (Joint All-to-All Attention):
-  [CLS] + q + [SEP] + d + [SEP] --> [ Transformer Layers (L=6) ] --> Linear Head --> Scalar Score
-                                    (All query tokens attend to all chunk tokens)
-```
-
-### The Bi-Encoder (`all-MiniLM-L6-v2`)
-A Bi-Encoder treats retrieval as a vector similarity problem in a metric space. The query $q$ and document chunk $d$ are passed through the transformer independently—either through distinct encoders or, as here, a shared Siamese network. Each token sequence is mean-pooled into a single 384-dimensional vector:
-$$\mathbf{e}_q = \text{Norm}(\text{MeanPool}(\text{Transformer}(q))), \quad \mathbf{e}_d = \text{Norm}(\text{MeanPool}(\text{Transformer}(d)))$$
-
-The relevance score is the inner product (cosine similarity) of the two unit vectors:
-$$s_{\text{bi}}(q, d) = \mathbf{e}_q^\top \mathbf{e}_d$$
-
-Because $\mathbf{e}_d$ is completely independent of $q$, we compute embeddings for all 237 chunks once at ingestion time and dump them into a flat inner-product FAISS index (`IndexFlatIP`). At query time, the system needs only one forward pass to embed $q$, followed by matrix multiplication that finishes in **~3.8 ms**.
-
-**The Price Paid:** Compressing 600 characters of technical prose into 384 floating-point numbers creates a severe representational bottleneck. The vector captures aggregate topical "gist" rather than syntactic composition. Small function words carrying immense logical weight—such as *"not"*, *"unless"*, *"prohibited"*, or domain synonyms—barely nudge the vector in embedding space. The Bi-Encoder easily falls for passages that share broad topical vocabulary with the query while completely missing the conditional answer.
-
-### The Cross-Encoder (`ms-marco-MiniLM-L-6-v2`)
-A Cross-Encoder discards the vector-space abstraction entirely. The query and passage are concatenated into a single token sequence separated by delimiter tokens:
-$$\mathbf{x} = [\text{CLS}] \circ q \circ [\text{SEP}] \circ d \circ [\text{SEP}]$$
-
-This sequence is fed through 6 transformer layers where **joint self-attention operates across all positions at every layer**. A token in the query can directly attend to a token in the passage:
-$$\text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^\top}{\sqrt{d_k}}\right)V$$
-
-The final hidden state of the $[\text{CLS}]$ token is fed to a linear classification head that outputs an unbounded relevance logit:
-$$s_{\text{cross}}(q, d) = \mathbf{W} \cdot \mathbf{h}_{[\text{CLS}]} + b$$
-
-Because tokens attend to each other across the sequence, the model readily detects whether a negative qualifier in the query aligns with a restrictive clause in the passage, or whether an apparent lexical match is purely superficial.
-
-**The Price Paid:** Relevance cannot be decomposed into $\mathbf{e}_q$ and $\mathbf{e}_d$. Every candidate chunk requires a distinct, full transformer forward pass conditioned on $q$. You cannot build a static index over the corpus. Evaluating 100,000 chunks would demand 100,000 forward passes for a single user query.
-
----
-
-## 2. Qualitative & Rank Shift Analysis
-
-### Methodology: Systematic Discovery of Failure Modes
-Rather than hand-crafting arbitrary prompts, we wrote a test discovery script ([`scripts/find_failure_queries.py`](file:///C:/Users/narsi/Documents/antigravity/charming-darwin/scripts/find_failure_queries.py)) that evaluated **33 candidate queries** against the NIST AI RMF corpus. Each query was mapped to a definitive target chunk containing the ground truth.
-
-Across the 33 queries:
-- **17 queries**: The ground-truth chunk was already in the top 3 of the baseline (the Bi-Encoder handled them without help).
-- **9 queries**: The ground-truth chunk was ranked $>10$ (a stage-1 recall failure; never reached the re-ranker).
-- **2 queries**: The chunk was in ranks 4–10 but was not promoted by the Cross-Encoder.
-- **5 queries**: The chunk sat buried at ranks 4–10 in the baseline, and the Cross-Encoder successfully promoted it into the top 3.
-
-We selected these 5 successful promotions (**F1–F5**), representing distinct failure categories, along with 1 structural recall failure (**S1**), to benchmark under identical conditions.
-
-### Test Case Summary
-
-Both pipelines fed their Top 3 retrieved passages into an identical prompt template answered by local **`Qwen2.5-14B-Instruct`** (4-bit NF4 quantization on the RTX 3080 Ti, greedy decoding with `do_sample=False`).
-
-| Query ID | Category | Target Chunk (Page) | Bi-Encoder Rank $\rightarrow$ Cross-Encoder Rank | In P1 Top 3? | In P2 Top 3? | Core Outcome |
-| :---: | :---: | :---: | :---: | :---: | :---: | :--- |
-| **F1** | Exception / Stop Rule | `chunk_0051` (p. 13) | **#9 $\rightarrow$ #1** (+8) | No | **Yes** | Baseline gave a factually false denial; re-ranking retrieved the stop rule. |
-| **F2** | Negation Qualifier | `chunk_0096` (p. 21) | **#4 $\rightarrow$ #1** (+3) | No | **Yes** | Baseline ungrounded / hedged; re-ranking quoted exact document constraint. |
-| **F3** | Caveat / Exception | `chunk_0098` (p. 21) | **#5 $\rightarrow$ #1** (+4) | No | **Yes** | Baseline suffered complete omission; re-ranking identified resource/IP limits. |
-| **F4** | Keyword / Synonym Trap | `chunk_0092` (p. 20) | **#5 $\rightarrow$ #1** (+4) | No | **Yes** | Baseline failed on colloquial phrase; re-ranking mapped to "resilience". |
-| **F5** | Buried Chunk (Control) | `chunk_0102` (p. 22) | **#4 $\rightarrow$ #3** (+1) | No | **Yes** | Rank shift occurred, but both answers were identical (boundary case). |
-| **S1** | Stage-1 Recall Wall | `chunk_0130` (p. 28) | **#29 $\rightarrow$ N/A** (0) | No | No | Re-ranker never saw the chunk; demonstrates stage-1 recall ceiling. |
-
----
-
-### In-Depth Case Studies
-
-#### 1. Case F1 (Exception / Hard Stop Condition): Complete Factual Error Fixed
-* **Query:** *"Is there any situation in which the framework says AI development should be stopped entirely?"*
-* **The Failure:** The Bi-Encoder pushed general governance passages (`chunk_0013`, `chunk_0191`, `chunk_0176`) to ranks 1–3 because they were saturated with high-frequency terms like *"AI development"*, *"lifecycle"*, and *"risk management"*. The actual governing rule—which specifies that development and deployment should cease if risks are unacceptable—was buried at **Rank #9** (`chunk_0051`, bi-score 0.464).
-* **Baseline Answer 1:**
-  > *"The provided context passages do not specify any situation where the AI Risk Management Framework dictates stopping AI development entirely... Therefore, no explicit directive to cease AI development is mentioned."*
-  
-  This is a flat hallucination of absence: the LLM was handed three broad governance chunks and concluded the rule does not exist.
-* **Re-Ranked Answer 2:**
-  The Cross-Encoder scored `chunk_0051` at **+1.19** (its highest score in the batch) and demoted the fluffy governance chunks into negative territory (e.g. `chunk_0013` dropped from #1 to #10 with score -8.00). Promoted to **Rank #1**, `chunk_0051` allowed the model to answer:
-  > *"Yes, according to the context provided, the AI RMF suggests that if an AI system presents unacceptable negative risk levels, such as imminent significant negative impacts, actual severe harms, or catastrophic risks, then its development and deployment should cease until these risks can be adequately managed. This guidance is found on page 13 of the document."*
-
----
-
-#### 2. Case F2 (Negation & Constraint): From Guesswork to Textual Grounding
-* **Query:** *"Does making an AI system transparent guarantee that it is accurate or fair?"*
-* **The Failure:** The Bi-Encoder matched chunks discussing transparency positively (`chunk_0093`, `chunk_0072`, `chunk_0095`), while the exact qualifying chunk (`chunk_0096`: *"a transparent system is not necessarily accurate, fair, or secure"*) landed at **Rank #4**.
-* **Baseline Answer 1:**
-  > *"Transparency in an AI system... primarily ensures that information... is accessible... However, the context does not explicitly state that transparency guarantees accuracy or fairness... Therefore, while transparency is important for trustworthiness, it does not alone guarantee that an AI system is accurate or fair."*
-  
-  The LLM reasoned out the correct conclusion using its internal weights, but explicitly flagged that the context lacked the statement. It was an ungrounded inference.
-* **Re-Ranked Answer 2:**
-  Promoting `chunk_0096` from **#4 to #1** provided the direct textual refutation:
-  > *"No, making an AI system transparent does not guarantee that it is accurate or fair... but a transparent system is not necessarily accurate, fair, or secure. The document emphasizes that while transparency can help in assessing other characteristics... it does not inherently ensure these qualities."*
-
----
-
-#### 3. Case F4 (Keyword / Synonym Trap): Bridging Lexical Vocabulary Mismatch
-* **Query:** *"What does the framework mean by the ability of a system to bounce back after an unexpected adverse event?"*
-* **The Failure:** The user asked about *"bouncing back"*, an informal phrasing. The document never uses the colloquial string *"bounce back"*; it uses the formal technical term *"resilience"*, defined on page 20 as *"the capacity to return to normal function following an unexpected adverse event"*. Because the Bi-Encoder relies heavily on sub-word lexical overlap, `chunk_0092` was pushed to **Rank #5**. Chunks with generic *"events"* or *"adverse impacts"* filled ranks 1–3.
-* **Baseline Answer 1:**
-  > *"The provided context passages do not explicitly define what the framework means by the ability of a system to 'bounce back'... However, the concept might relate to robustness, which is mentioned on page 19... Additionally... resilience or recovery capabilities could be inferred... though this is not directly stated."*
-  
-  The baseline hedges and incorrectly guesses "robustness".
-* **Re-Ranked Answer 2:**
-  The Cross-Encoder attended to the semantic equivalence between *"bounce back after an unexpected adverse event"* and *"return to normal function"*, shooting `chunk_0092` to **Rank #1** (cross-score +1.28). Answer 2 was decisive:
-  > *"The NIST AI Risk Management Framework refers to the ability of a system to bounce back after an unexpected adverse event as resilience. Resilience is described as the capacity to return to normal function following such an event..."*
-
----
-
-#### 4. The Counter-Observations: F5 and S1
-Science is unconvincing when it only shows cherry-picked successes. Two cases in our data expose the practical nuances and hard boundaries of re-ranking:
-
-* **F5 (A Rank Shift That Made No Difference):**
-  In F5 (*"What is the difference between explainability and interpretability?"*), the target `chunk_0102` jumped from **Rank #4 to Rank #3**. Yet Answer 1 and Answer 2 are virtually indistinguishable. Why? Because the Bi-Encoder's top 3 already included `chunk_0101` and `chunk_0103`—adjacent slices of text from page 21–22 that contained redundant definitions. **A rank promotion only alters the generation if it introduces non-redundant information absent from the baseline window.**
-* **S1 (The Stage-1 Recall Ceiling):**
-  In S1 (*"What specific operational actions are required for AI system decommissioning and end-of-life residual risk?"*), the definitive passage (`chunk_0130` on page 28) was ranked **#29** by the Bi-Encoder. Because Pipeline 2 only feeds the Top 10 to the Cross-Encoder, the model never saw `chunk_0130`. Both pipelines produced identically vague non-answers. **Re-ranking cannot fix what retrieval failed to surface.**
-
----
-
-## 3. Latency Profiling
-
-We benchmarked stage timings over **20 repeated executions** on the ADA RTX 3080 Ti following an initial warm-up pass.
-
-### Execution Latencies (Median & 95th Percentile)
-
-| Query ID | Stage 1 Retrieval (FAISS) Median (p95) | Stage 2 Re-Rank (10 pairs) Median (p95) | Answer 1 Gen (Tokens) | Answer 2 Gen (Tokens) | Pipeline 1 Total | Pipeline 2 Total | Re-Rank Share of Pipeline 2 |
-| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **F1** | 3.85 ms (3.93 ms) | 8.41 ms (8.43 ms) | 6,215 ms (99 tok) | 4,313 ms (68 tok) | 6,219 ms | 4,326 ms | 0.19% |
-| **F2** | 3.83 ms (3.85 ms) | 8.07 ms (8.09 ms) | 7,677 ms (125 tok) | 5,860 ms (95 tok) | 7,681 ms | 5,872 ms | 0.14% |
-| **F3** | 3.83 ms (3.85 ms) | 7.78 ms (7.82 ms) | 5,218 ms (84 tok) | 6,686 ms (108 tok) | 5,221 ms | 6,698 ms | 0.12% |
-| **F4** | 3.86 ms (3.90 ms) | 8.36 ms (8.38 ms) | 7,648 ms (124 tok) | 8,803 ms (143 tok) | 7,652 ms | 8,816 ms | 0.09% |
-| **F5** | 3.73 ms (3.75 ms) | 8.07 ms (8.10 ms) | 9,671 ms (157 tok) | 7,692 ms (124 tok) | 9,675 ms | 7,704 ms | 0.10% |
-| **S1** | 3.86 ms (3.87 ms) | 8.60 ms (9.02 ms) | 9,494 ms (155 tok) | 6,457 ms (104 tok) | 9,497 ms | 6,470 ms | 0.13% |
-| **Mean** | **3.83 ms (3.86 ms)** | **8.22 ms (8.31 ms)** | **7,654 ms (124 tok)**| **6,635 ms (107 tok)**| **7,658 ms**| **6,647 ms**| **0.13%** |
-
-### Latency Findings
-
-1. **Re-Ranking is Numerically Free:**
-   Scoring 10 candidate pairs with `ms-marco-MiniLM-L-6-v2` in a single GPU batch took **8.22 ms**. In a system where autoregressive text generation takes 4,000–9,000 ms, re-ranking represents **0.13%** of total query latency. It is imperceptible to end users.
-2. **The Generation-Time Paradox:**
-   Counter-intuitively, Pipeline 2 had a *shorter* average end-to-end runtime than Pipeline 1 (6,647 ms vs. 7,658 ms). This has nothing to do with retrieval efficiency. At an inference throughput of **~16.2 tokens/second**, total runtime is dictated by output length. In F1 and F2, when the baseline model lacked the right chunk, it generated verbose, hedging explanations (125 tokens). When the re-ranker provided the exact sentence, the model stated the answer cleanly in 68 tokens, shaving over 1.8 seconds off decoding time.
-
----
-
-## 4. Scaling: Why Not Run a Cross-Encoder from the Very Start?
-
-If Cross-Encoders are so overwhelmingly accurate, why do we bother with Bi-Encoders at all? Why not pipe the entire document collection through the Cross-Encoder directly?
-
-To answer this concretely, we ran an empirical benchmark directly inside the notebook, measuring full-corpus Cross-Encoding on the RTX 3080 Ti versus Bi-Encoder + FAISS search:
-
-```
-[Empirical Measurement on 237 Chunks (RTX 3080 Ti)]:
-- Cross-Encoder scoring all 237 chunks for 1 query: 103.0 ms (0.43 ms per pair, batched)
-- Bi-Encoder query encoding + FAISS inner-product search: 4.1 ms
+```mermaid
+flowchart LR
+    subgraph OFF["Offline, once per chunk"]
+        direction LR
+        C["Chunk text"] --> EC["Encoder<br/>6 layers"] --> PC["Mean pooling<br/>+ L2 normalise"] --> VC["Chunk vector<br/>384-d"] --> IDX[("FAISS index<br/>237 vectors")]
+    end
+    subgraph ON["At query time"]
+        direction LR
+        Q["Query text"] --> EQ["Encoder<br/>same weights"] --> PQ["Mean pooling<br/>+ L2 normalise"] --> VQ["Query vector<br/>384-d"] --> SR["Inner product with every<br/>stored vector = cosine"] --> TK["Top 10 chunks"]
+    end
+    IDX --> SR
 ```
 
-Using our measured unit cost of **0.4328 ms per (query, chunk) pair**, we extrapolate to production corpus sizes:
+**Cross-encoder** (ms-marco-MiniLM-L-6-v2): query and chunk are read together, so it has to run once per (query, chunk) pair.
 
-| Corpus Size ($N$ Chunks) | Cross-Encoder Over Every Chunk ($O(N)$) | Two-Stage RAG: Bi-Encoder + Top 10 Re-rank ($O(\log N)$) | Speedup Factor |
-| :---: | :---: | :---: | :---: |
-| **237** (Our corpus) | 0.103 seconds | **0.004 seconds** | $25\times$ |
-| **10,000** (Small manual) | 4.33 seconds | **0.004 seconds** | $1,080\times$ |
-| **1,000,000** (Enterprise docs) | **432.8 seconds (~7.2 minutes)** | **0.004 seconds** | $108,200\times$ |
-| **100,000,000** (Web search) | **43,281 seconds (~12.0 hours)** | **0.004 seconds** | $10,820,000\times$ |
+```mermaid
+flowchart LR
+    IN["[CLS] query [SEP] chunk [SEP]<br/>one joint input"] --> T["6 transformer layers<br/>self-attention across all tokens:<br/>query and chunk tokens see each other"] --> H["[CLS] output<br/>-> pooler -> linear layer"] --> S["Relevance score<br/>(one logit)"]
+```
 
-### The Three Structural Walls of Exhaustive Cross-Encoding
+**How they are combined into the two pipelines:**
 
-1. **Computational Asymptotics:**
-   A Bi-Encoder splits computation into an offline phase ($O(N)$ transformer passes executed once during indexing) and an online query phase. Query retrieval against pre-normalized embeddings reduces to Maximum Inner Product Search (MIPS), which takes $O(D)$ for flat vector scanning or $O(\log N)$ with hierarchical navigable small-world (HNSW) graphs.
-   
-   A Cross-Encoder has **zero offline pre-computation**. Because query tokens and document tokens are coupled in the very first self-attention layer, every candidate document must pass through all $L$ layers of the transformer together with $q$ at query time. The inference complexity is strictly $O(N \cdot L \cdot (|q| + |d|)^2)$. At 1 million chunks, answering one query takes 7.2 minutes of continuous GPU tensor-core saturation.
+```mermaid
+flowchart LR
+    PDF["NIST AI RMF PDF"] --> CH["237 chunks<br/>600 chars, 120 overlap"] --> IX[("Bi-encoder vectors<br/>in FAISS (offline)")]
+    Q["Query"] --> R["Stage 1: embed query,<br/>FAISS search (~3.8 ms)"]
+    IX --> R
+    R --> T10["Same top 10<br/>for both pipelines"]
+    T10 --> A["Pipeline 1:<br/>keep bi-encoder order,<br/>take top 3"] --> L1["Qwen2.5-14B (4-bit)<br/>identical prompt"] --> ANS1["Answer 1"]
+    T10 --> X["Pipeline 2: cross-encoder<br/>scores 10 pairs, re-sorts<br/>(~8.2 ms), take top 3"] --> L2["Qwen2.5-14B (4-bit)<br/>identical prompt"] --> ANS2["Answer 2"]
+```
 
-2. **The Throughput & Concurrency Wall:**
-   Even if a data center could tolerate a 4-second delay for 10,000 chunks, serving 1,000 concurrent user queries would require 10,000,000 forward passes per second. The server fleet would melt under memory bandwidth pressure alone.
+A bi-encoder embeds the query and each chunk separately, mean-pools each into a single 384-d vector, and compares them with cosine similarity. Since a chunk's vector doesn't depend on the query, I computed all 237 chunk vectors once and stored them in a FAISS index. At query time only the query has to be encoded, which took about 3.8 ms. The downside is that a whole 600-character chunk gets squeezed into one vector. That vector captures the general topic, but small words that change the meaning, like "not", "unless" or "prohibited", or a synonym, barely move it. So the bi-encoder tends to pick chunks that share the query's topic even when they don't answer it.
 
-3. **The Funnel Architecture as the Only Viable Synthesis:**
-   Industrial RAG systems resolve this tension by adopting a **two-stage funnel**:
-   - **Stage 1 (High Recall, Coarse Precision):** The Bi-Encoder scans millions of vectors in $<5$ ms to discard 99.99% of irrelevant documents, guaranteeing high recall on candidate chunks.
-   - **Stage 2 (High Precision, Fixed Cost):** The Cross-Encoder acts as an expensive filter on a constant number of candidates ($K=10$ or $K=50$). Because $K$ is invariant to total collection size $N$, the re-ranking stage executes in a fixed **~8 ms window**, whether the underlying database contains 200 chunks or 200 million.
-   
-   The critical architectural lesson from our experiments is that the funnel is non-negotiable—and that its primary vulnerability is Stage 1 recall (as demonstrated in S1).
+A cross-encoder takes the query and the chunk together as one input. Self-attention runs across both in every layer, so query tokens and chunk tokens can attend to each other directly. The output is one relevance score (a raw logit) computed from the `[CLS]` position. That makes it much better at telling whether a passage actually answers the question, such as whether a negation in the query matches a restriction in the text. The cost is that nothing can be precomputed: every (query, chunk) pair needs its own forward pass.
+
+## 2. Rank shifts and answer comparison
+
+I hand-wrote 33 candidate queries across the failure categories and paired each one with a phrase from the passage that actually answers it. A script ([`scripts/find_failure_queries.py`](scripts/find_failure_queries.py)) then checked where that passage ranked under each pipeline:
+
+- 17 already had the answer in the bi-encoder's top 3.
+- 9 had it below rank 10, so the re-ranker never saw it.
+- 2 had it at ranks 4–10, and the cross-encoder didn't promote it.
+- 5 had it at ranks 4–10, and the cross-encoder moved it into the top 3.
+
+I used those 5 (F1–F5), plus one stage-1 miss (S1).
+
+| ID | Type | Answer chunk (page) | Bi rank → CE rank | Effect on the answer |
+|---|---|---|---|---|
+| F1 | exception / stop rule | chunk_0051 (p.13) | #9 → #1 | Baseline wrongly said no such rule exists; re-ranked answer got it right |
+| F2 | negation | chunk_0096 (p.21) | #4 → #1 | Baseline hedged and reasoned on its own; re-ranked answer quoted the document |
+| F3 | caveat / exception | chunk_0098 (p.21) | #5 → #1 | Baseline missed it entirely; re-ranked answer found the resource and proprietary-info limits |
+| F4 | keyword / synonym trap | chunk_0092 (p.20) | #5 → #1 | Baseline guessed "robustness"; re-ranked answer correctly said "resilience" |
+| F5 | buried chunk | chunk_0102 (p.22) | #4 → #3 | Chunk moved, but both answers were the same |
+| S1 | stage-1 miss | chunk_0130 (p.28) | #29 → not in top 10 | Both answers failed |
+
+**F1** is the clearest case. The query was *"Is there any situation in which the framework says AI development should be stopped entirely?"*. The bi-encoder's top 3 were general framework chunks (chunk_0013, chunk_0191, chunk_0176), and the actual rule sat at #9. Answer 1 said *"no explicit directive to cease AI development is mentioned"*, which is wrong. It isn't a made-up fact, but the model concluded the rule doesn't exist because it never saw it. The cross-encoder gave chunk_0051 the highest score in the batch (+1.19) and dropped chunk_0013 from #1 to #10. Answer 2 then said development and deployment should cease when risks are unacceptable, and cited page 13.
+
+**F2.** The baseline's top 3 were chunks that talk about transparency positively. The chunk with *"A transparent system is not necessarily an accurate, privacy-enhanced, secure, or fair system"* was at #4. Answer 1 actually reached the right conclusion, but it said the context didn't state it, so it was the model's own inference rather than something grounded in the text. After re-ranking, Answer 2 quoted the document.
+
+**F4.** The query says "bounce back". The document calls this *resilience*, defined as *"the ability to return to normal function after an unexpected adverse event"*. That chunk also talks about security, and the query vector didn't land close enough to it, so it was at #5. Answer 1 said the term wasn't defined and guessed robustness. The cross-encoder put chunk_0092 at #1 (score +3.12), and Answer 2 correctly called it resilience.
+
+**F5 and S1 show the limits.** In F5 the answer chunk moved from #4 to #3, but the two answers were basically the same. The baseline's top 3 (chunk_0101, chunk_0100, chunk_0099, all on page 21) already had both definitions. A rank promotion only changes the answer if it brings in information the baseline context didn't already have. In S1 the decommissioning passage (GOVERN 1.7, chunk_0130) was at #29, so the cross-encoder never saw it, and both answers were vague non-answers. Re-ranking can only reorder what stage 1 retrieves, so stage-1 recall is the ceiling.
+
+**Extra: retrieval quality over all 33 candidate queries.** Each query has a known answer chunk, so I could also score both orderings over the whole candidate set ([`data/failure_query_search.json`](data/failure_query_search.json)):
+
+| Metric (33 queries) | Bi-encoder order | After cross-encoder |
+|---|---|---|
+| Answer chunk at #1 (Hit@1) | 12 (36%) | 17 (52%) |
+| Answer chunk in top 3 (Hit@3, what the LLM sees) | 17 (52%) | 22 (67%) |
+| MRR@10 | 0.471 | 0.587 |
+| Answer chunk in top 10 (the ceiling for both) | 24 (73%) | 24 (73%) |
+
+The cross-encoder never pushed a correct chunk *out* of the top 3. Of the 11 queries still missing after re-ranking, 9 are stage-1 recall failures and 2 were in the top 10 but not promoted. These queries were written to probe failure cases, so the numbers show the direction of the effect rather than a general benchmark.
+
+## 3. Latency
+
+Each stage was timed over 20 runs after a warm-up. The table shows medians, with p95 in brackets, on one RTX 3080 Ti.
+
+| ID | Stage 1: retrieve top 10 | Stage 2: re-rank 10 | Answer 1 gen (tokens) | Answer 2 gen (tokens) | Pipeline 1 total | Pipeline 2 total |
+|---|---|---|---|---|---|---|
+| F1 | 3.85 ms (3.93) | 8.41 ms (8.43) | 6,215 ms (99) | 4,313 ms (68) | 6,219 ms | 4,326 ms |
+| F2 | 3.83 ms (3.85) | 8.07 ms (8.09) | 7,677 ms (125) | 5,860 ms (95) | 7,681 ms | 5,872 ms |
+| F3 | 3.83 ms (3.85) | 7.78 ms (7.82) | 5,218 ms (84) | 6,686 ms (108) | 5,221 ms | 6,698 ms |
+| F4 | 3.86 ms (3.90) | 8.36 ms (8.38) | 7,648 ms (124) | 8,803 ms (143) | 7,652 ms | 8,816 ms |
+| F5 | 3.73 ms (3.75) | 8.07 ms (8.10) | 9,671 ms (157) | 7,692 ms (124) | 9,675 ms | 7,704 ms |
+| S1 | 3.86 ms (3.87) | 8.60 ms (9.02) | 9,494 ms (155) | 6,457 ms (104) | 9,497 ms | 6,470 ms |
+| **Mean** | **3.83 ms** | **8.22 ms** | **7,654 ms (124)** | **6,635 ms (107)** | **7,658 ms** | **6,647 ms** |
+
+Re-ranking adds about 8 ms per query. That's around 0.13% of the total, because generation takes 4.3–9.7 s at about 16 tokens/s. Pipeline 2 was faster on average, but only because its answers happened to be shorter. In F1 and F2 the hedging baseline answers were longer, but in F3 and F4 the re-ranked answers were the longer ones. Total time comes down to how long the answer is, not to the retrieval method.
+
+## 4. Why not cross-encode the whole collection?
+
+The cross-encoder has to run once per chunk for every query, and nothing can be cached. I measured it in the notebook. Scoring all 237 chunks for one query took 103 ms (0.43 ms per pair, batched). The bi-encoder plus FAISS search over the same chunks took 4.1 ms.
+
+Extrapolating the per-pair cost:
+
+| Chunks | Cross-encode everything | Re-rank top 10 only |
+|---|---|---|
+| 237 | 0.10 s | 0.004 s |
+| 10,000 | 4.3 s | 0.004 s |
+| 1,000,000 | ~7.2 min | 0.004 s |
+| 100,000,000 | ~12 h | 0.004 s |
+
+The last column is only stage 2. Stage 1 adds to it: 4.1 ms here with a flat index, which is O(N·D). At millions of chunks you would need an approximate index like HNSW, which I didn't test. Throughput is a problem too. One GPU managed about 2,300 pairs per second, while 1,000 queries per second over 10,000 chunks would need 10 million pairs per second.
+
+That's why the two stages split the work. The bi-encoder does one offline pass over the corpus, and then each query only needs a cheap index lookup to narrow the collection down to 10 candidates. The cross-encoder then runs on just those 10, so its cost stays fixed at about 8 ms no matter how big the collection gets. The trade-off, as S1 shows, is that anything stage 1 misses is gone for good. So stage-1 recall is the thing to improve next, for example by retrieving more candidates or adding a keyword-based retriever.
